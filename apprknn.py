@@ -31,7 +31,7 @@ def knn_experiments(brainfiles, kRange, dRange,fracRange, nfolds,leftRight=False
     return res
 
 def knn_experiments_no_clique(brainfiles, embedDir, graphDir, lccDir, roiDir,
-                              kRange, dRange,trainFrac, testSize, nmc,leftRight=False,
+                              kRange, dRange,trainFra, testSize, nmc,leftRight=False,
                               savefn=None):
     nrec = len(brainfiles)*len(kRange)*len(trainFrac)*len(dRange)*nmc
     res = np.recarray(nrec,dtype=[('bfn',object),('k',int),('d',int),('frac',float),('Lhat',type(np.array))])
@@ -41,17 +41,30 @@ def knn_experiments_no_clique(brainfiles, embedDir, graphDir, lccDir, roiDir,
         startTime = time.time()
         x, y, G = brain.get_stfp_data_from_fn(roiDir, lccDir, embedDir, graphDir,bfn)
         
+        G = G+sparse.dia_matrix((ones(G.shape[0]),0), shape=G.shape) # add self loops to make sure each vertex is its own neighbor
+
+        n = x.shape[0]
+
+        # permute to avoid nonsense
+        perm = np.random.permutation(n)
+        x=x[perm,:]
+        y=y[perm,:]
+        G = G[:,perm][perm,:]
+
+                
         if leftRight:
             y = np.greater(y,99).astype(int)
-        
-        for d in dRange:
-            print "d="+repr(d)
-            xd = x[:,:d]
-            for frac in trainFrac:
-                for mc  in np.arange(nmc):
-                    trainSz = int(np.floor(frac*x.shape[0]))
-                    train = np.array(sample(np.arange(x.shape[0]),trainSz))
-                    test = np.array(sample(np.arange(trainSz), testSize)) # this is ok since we will ignore this when we test
+
+            
+        for frac in trainFrac:
+            for mc  in np.arange(nmc):
+                trainSz = int(np.floor(frac*x.shape[0]))
+                train = np.array(sample(np.arange(x.shape[0]),trainSz))
+                test = np.array(sample(np.arange(trainSz), testSize))
+                for d in dRange:
+                    
+                    print "d="+repr(d)
+                    xd = x[:,:d]
                     fpnn = train_fpnn(xd[train,:],y[train],G[train,:],np.max(kRange))
                     for k in kRange:
                         Lhat = test_fpnn(fpnn,xd[train[test]],y[train[test]],k,test)
@@ -64,6 +77,67 @@ def knn_experiments_no_clique(brainfiles, embedDir, graphDir, lccDir, roiDir,
         print "Time = "+repr(time.time()-startTime)
     return res
 
+def knn_experiments_compare(brainfiles, embedDir, graphDir, lccDir, roiDir,
+                              kRange, dRange,fracRange, nmc, testSize=None,
+                            leftRight=False, savefn=None):
+    """
+    Compare the K-nearest-neighbors when training on graph neighbors or when ignoring neighbors
+    
+    @INPUT:
+    brainFiles ---  the UIDs associated with each brain
+    *Dir --- where to find the different stuff to load
+    kRange --- range of nearest neighbors
+    """
+    nrec = len(kRange)*len(dRange)
+    
+    for bfn in brainfiles:
+        print "Testing Brain: "+bfn
+        startTime = time.time()
+        x, y, G = brain.get_stfp_data_from_fn(roiDir, lccDir, embedDir, graphDir,bfn)
+        
+        if leftRight:
+            y = np.greater(y,99).astype(int)
+
+        for frac in fracRange:
+            lfo = cv.ShuffleSplit(x.shape[0], nmc, frac)
+            
+            for train, test in lfo:
+                resC = np.recarray(nrec,dtype=[('bfn',object),('k',int),('d',int),('frac',float),('Lhat',float)])
+                resN = np.recarray(nrec,dtype=[('bfn',object),('k',int),('d',int),('frac',float),('Lhat',float)])
+
+                idx = 0
+                print "Run "+repr(idx+1)+"for training fraction "+repr(frac)
+                
+                test = test.nonzero()[0]
+                if testSize is not None:
+                    test = np.array(sample(test,testSize))
+                for d in dRange:
+                    xd = x[:,:d]
+                    fpnn = train_fpnn(xd[train,:],y[train],G[train,:],np.max(kRange))
+                    fnn = train_fnn(xd[train,:],y[train], np.max(kRange))
+                    for k in kRange:
+                        Lhat = test_fpnn(fpnn,xd[test,:],y[test],k,test)
+                        resN[idx] = (bfn, k,d,frac,Lhat)
+                        
+                        Lhat = test_fnn(fnn,xd[test,:],y[test],k)
+                        resC[idx] = (bfn, k,d,frac,Lhat)
+                        idx += 1
+                    
+                if savefn is not None:
+                    try:
+                        old = np.load(savefn[0])
+                        np.save(savefn[0],np.concatenate((old,resC)))
+                    except IOError:
+                        print "Saving new file"
+                        np.save(savefn[0],resC)
+                    try:
+                        old = np.load(savefn[1])
+                        np.save(savefn[1],np.concatenate((old,resN)))
+                    except IOError:
+                        print "Saving new file"
+                        np.save(savefn[1],resN)
+
+        print "Time = "+repr(time.time()-startTime)
 
 
 def train_fpnn(X, roi, G, kmax):
@@ -77,9 +151,21 @@ def test_fpnn(fpnn, X, roi, k, testIdx):
     pred_labels = np.array([fpnn.predict(X[idx,:],testIdx[idx]) for idx in xrange(len(testIdx))]).flatten()
     Lhat = np.mean(np.not_equal(roi,pred_labels))
 
+    fpnn.n_neighbors = kMax
     return Lhat
 
-    
+
+def train_fnn(X,roi,kmax):
+    fnn = FNN(kmax)
+    fnn.fit(X,roi)
+    return fnn
+
+def test_fnn(fnn, X,roi,k):
+    kMax = fnn.n_neighbors
+    fnn.n_neighbors = k
+    Lhat=1-fnn.score(X,roi)
+    fnn.n_neighbors = kMax
+    return Lhat
 
 def plot_err_vs_k(res):
     res = res[np.not_equal(res.bfn,None)]

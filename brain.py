@@ -1,3 +1,4 @@
+
 '''
 Created on Mar 12, 2012
 
@@ -23,6 +24,7 @@ import adjacency
 
 from stfpSim import fastaprnn as FNN
 
+import time
 
 graphDir = '/mnt/braingraph1data/projects/MRN/graphs/biggraphs/'
 roiDir = '/mnt/braingraph1data/projects/MRN/base/roi/'
@@ -42,7 +44,7 @@ mrnDict =  {"brainfiles":brainFiles,
 }
 
 
-
+"""
 blsaDir = '/mnt/braingraph1data/projects/BLSA/aug12-mrcap/'
 blsaBigGraph = blsaDir+'graphs/big/'
 blsaROI = blsaDir+'intermediate/roi/'
@@ -56,6 +58,7 @@ blsaDict = {"brainfiles":blsaFiles,
             "embedDir":blsaEmb,
             "lccDir":blsaLCC,
 }
+"""
     
 def load_fibergraph(roiDir, graphDir, bfn):
     
@@ -81,19 +84,24 @@ def get_roi(fg):
     return G,inroi,roival
 
 
-def get_emb_from_fn(roiDir, graphDir, ccDir, embedDir, bfn,e):
+def get_emb_from_fn(roiDir, graphDir, lccDir, embedDir, bfn,embed):
+    startTime = time.time()
     print bfn
     print "Loading LCC"
-    vcc = lcc.ConnectedComponent(fn=ccDir+bfn+'_concomp.npy')
+    vcc = lcc.ConnectedComponent(fn=lccDir+bfn+'_concomp.npy')
     print "Loading Graph"
     fg = load_fibergraph(roiDir, graphDir, bfn)
     print "Get Induced Subgraph, Binarize, Symetrize"
+    G =  vcc.induced_subgraph(fg.spcscmat)
     
     print "Embed"
-    X = e.embed(G).get_scaled()
+    X = embed.embed(G).get_scaled()
 
     if embedDir is not None:
         np.save(embedDir+bfn+'_embed.npy',X)
+        print "Time = "+repr(time.time()-startTime)
+        return
+
     return X
 
 
@@ -101,7 +109,7 @@ def get_emb_from_fn(roiDir, graphDir, ccDir, embedDir, bfn,e):
     
 def get_3d(x,shape):
         """Takes a shape which is the shape of the new 3d image and 'colors' the image by connected component
-        
+        def 
         Input
         =====
         shape -- 3-tuple
@@ -155,7 +163,7 @@ def get_stfp_data_from_fn(roiDir, lccDir, embedDir, graphDir,bfn):
     vcc = lcc.ConnectedComponent(fn=lccDir+bfn+'_concomp.npy')
 
     G = vcc.induced_subgraph(fg.spcscmat)
-    X = np.load(embedDir+bfn+'_embedding.npy')
+    X = np.load(embedDir+bfn+'_embed.npy')
     
     inccIdx = (vcc.vertexCC==1).nonzero()[0]
     ccRoi = np.array([fg.rois.get(zindex.MortonXYZ(v)) for v in inccIdx])
