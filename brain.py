@@ -26,12 +26,12 @@ from stfpSim import fastaprnn as FNN
 
 import time
 
-graphDir = '/mnt/braingraph1data/projects/MRN/graphs/biggraphs/'
-roiDir = '/mnt/braingraph1data/projects/MRN/base/roi/'
+graphDir = '/mnt/braingraph2data/projects/MR/MRN/graphs/biggraphs/'
+roiDir = '/mnt/braingraph2data/projects/MR/MRN/base/roi/'
 ccDir = '/data/biggraphs/connectedcomp/'
 figDir = '/home/dsussman/Dropbox/Figures/DTMRI/lccPics/'
-faDir = '/mnt/braingraph1data/projects/MRN/base/fa/'
-mprDir = '/mnt/braingraph1data/projects/MRN/base/input/mprage_ss_crop/'
+faDir = '/mnt/braingraph2data/projects/MR/MRN/base/fa/'
+mprDir = '/mnt/braingraph2data/projects/MR/MRN/base/input/mprage_ss_crop/'
 embDir = '/data/biggraphs/embedding/'
 brainFiles = np.sort([fn.split('_')[0] for fn in os.listdir(ccDir)])
 bfn = brainFiles[0]
@@ -163,6 +163,8 @@ def get_stfp_data_from_fn(roiDir, lccDir, embedDir, graphDir,bfn):
     vcc = lcc.ConnectedComponent(fn=lccDir+bfn+'_concomp.npy')
 
     G = vcc.induced_subgraph(fg.spcscmat)
+    G.data = np.ones_like(G.data) # Binarize
+    G = G+G.T # Symmetrize
     X = np.load(embedDir+bfn+'_embed.npy')
     
     inccIdx = (vcc.vertexCC==1).nonzero()[0]
