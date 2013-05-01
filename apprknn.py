@@ -1,5 +1,5 @@
-from stfpSim.fastaprnn import FAKNeighborsClassifier as FNN
-from stfpSim.fastaprnn import FAKPseudoNeighbor as FPNN
+from fastaprnn import FAKNeighborsClassifier as FNN
+from fastaprnn import FAKPseudoNeighbor as FPNN
 from sklearn import cross_validation as cv
 import numpy as np
 from matplotlib import pyplot as plt
