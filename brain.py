@@ -16,25 +16,46 @@ import roi
 import fibergraph
 import zindex
 import lcc
-
 import time
+import socket
 
-graphDir = '/mnt/braingraph2data/projects/MR/MRN/graphs/biggraphs/'
-roiDir = '/mnt/braingraph2data/projects/MR/MRN/base/roi/'
-ccDir = '/data/biggraphs/connectedcomp/'
-figDir = '/home/dsussman/Dropbox/Figures/DTMRI/lccPics/'
-faDir = '/mnt/braingraph2data/projects/MR/MRN/base/fa/'
-mprDir = '/mnt/braingraph2data/projects/MR/MRN/base/input/mprage_ss_crop/'
-embDir = '/data/biggraphs/embedding/'
-brainFiles = np.sort([fn.split('_')[0] for fn in os.listdir(ccDir)])
-bfn = brainFiles[0]
+if socket.gethostname() == 'braingraph2':
+    graphDir = '/data/projects/MR/MRN/graphs/biggraphs/'
+    roiDir = '/data/projects/MR/MRN/base/roi/'
+    ccDir = '/data/projects/MR/MRN/roiKnn/connectedcomp/'
+    figDir = '/home/dsussman/Dropbox/Figures/DTMRI/lccPics/'
+    faDir = '/data/projects/MR/MRN/base/fa/'
+    mprDir = '/data/projects/MR/MRN/base/input/mprage_ss_crop/'
+    embDir = '/data/projects/MR/MRN/roiKnn/embedding/'
+    brainFiles = np.sort([fn.split('_')[0] for fn in os.listdir(ccDir)])
+    bfn = brainFiles[0]
 
-mrnDict = {"brainfiles": brainFiles,
-           "roiDir": roiDir,
-           "graphDir": graphDir,
-           "embedDir": embDir,
-           "lccDir": ccDir,
-           }
+    mrnDict = {"brainfiles": brainFiles,
+               "roiDir": roiDir,
+               "graphDir": graphDir,
+               "embedDir": embDir,
+               "lccDir": ccDir,
+               }
+
+
+if socket.gethostname() == 'braincrunch4': # This probably is wrong still
+    graphDir = '/mnt/braingraph2data/projects/MR/MRN/graphs/biggraphs/'
+    roiDir = '/mnt/braingraph2data/projects/MR/MRN/base/roi/'
+    ccDir = '/data/biggraphs/connectedcomp/'
+    figDir = '/home/dsussman/Dropbox/Figures/DTMRI/lccPics/'
+    faDir = '/mnt/braingraph2data/projects/MR/MRN/base/fa/'
+    mprDir = '/mnt/braingraph2data/projects/MR/MRN/base/input/mprage_ss_crop/'
+    embDir = '/data/biggraphs/embedding/'
+    brainFiles = np.sort([fn.split('_')[0] for fn in os.listdir(ccDir)])
+    bfn = brainFiles[0]
+
+    mrnDict = {"brainfiles": brainFiles,
+               "roiDir": roiDir,
+               "graphDir": graphDir,
+               "embedDir": embDir,
+               "lccDir": ccDir,
+               }
+
 
 
 """
