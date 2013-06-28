@@ -274,10 +274,16 @@ def knn_error_plot(bfiles, kRange, dRange, nfolds, savefn):
                      color=c[j], linewidth=j + 2, label=labelN)
 
 
-def get_cv_neighbors(x, y, G, crossval, k, d, permute=False):
+def get_cv_neighbors(x, G, crossval, k, d, permute=False):
     x = x[:, :d]
     # inccIdx = (vcc.vertexCC==1).nonzero()[0]
-
+    '''
+    x = n x dd embedding matrix
+    G = graph corresponding to the largest connected component 
+    crossval =  number of folds (in this case 5)
+    k = number of nearest neighbors to indicate 
+    d = number of dimensions to use. ( d <= dd of x)
+    '''
     nnodes = x.shape[0]
 
     if permute:
@@ -285,20 +291,20 @@ def get_cv_neighbors(x, y, G, crossval, k, d, permute=False):
         print "Permuting Vertices"
         p = np.random.permutation(nnodes)
         x = x[p, :]
-        y = y[p]
+        #y = y[p]
         G = G[p, :][:, p]
 
     neighC = np.zeros((nnodes, k), dtype=np.int32)
     neighN = np.zeros((nnodes, k), dtype=np.int32)
 
     if type(crossval) is int:
-        crossval = cv.StratifiedKFold(y, crossval, indices=True)
+        crossval = cv.StratifiedKFold(crossval, indices=True)
     nfolds = crossval.k
 
     for fold, (train, test) in enumerate(crossval):
         print "Training fold", fold
 
-        fpnn = train_fpnn(x[train, :], y[train], G[train, :], k)
+        fpnn = train_fpnn(x[train, :], G[train, :], k)
 
         print "Getting Neighbors"
 
